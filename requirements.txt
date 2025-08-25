@@ -3,3 +3,5 @@ flask
 pandas
 pillow
 streamlit-drawable-canvas
+reportlab
+reportlab

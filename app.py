@@ -7,6 +7,12 @@ import base64
 from io import BytesIO
 import pandas as pd
 from PIL import Image
+from reportlab.lib.pagesizes import letter, A4
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image as RLImage
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
+from reportlab.lib import colors
+from reportlab.lib.enums import TA_CENTER, TA_LEFT
 
 # Set page config
 st.set_page_config(
@@ -125,6 +131,205 @@ def delete_form_from_db(form_id):
     conn.commit()
     conn.close()
 
+def generate_pdf_form(form_data):
+    """Generate a PDF matching the exact original format"""
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=0.3*inch, bottomMargin=0.3*inch, leftMargin=0.4*inch, rightMargin=0.4*inch)
+    
+    # Get styles
+    styles = getSampleStyleSheet()
+    
+    # Custom styles to match original - reduced spacing
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=16,
+        spaceAfter=10,
+        alignment=TA_CENTER,
+        fontName='Helvetica-Bold'
+    )
+    
+    subtitle_style = ParagraphStyle(
+        'Subtitle',
+        parent=styles['Normal'],
+        fontSize=11,
+        spaceAfter=10,
+        alignment=TA_CENTER,
+        fontName='Helvetica'
+    )
+    
+    heading_style = ParagraphStyle(
+        'SectionHeading',
+        parent=styles['Heading2'],
+        fontSize=10,
+        fontName='Helvetica-Bold',
+        spaceAfter=5,
+        spaceBefore=8
+    )
+    
+    normal_style = ParagraphStyle(
+        'Normal',
+        parent=styles['Normal'],
+        fontSize=9,
+        fontName='Helvetica'
+    )
+    
+    # Build content
+    story = []
+    
+    # Title section
+    story.append(Paragraph("FICHE D'ASSIDUITÉ", title_style))
+    story.append(Paragraph("Garderie en milieu familial", subtitle_style))
+    story.append(Spacer(1, 8))
+    
+    # Basic Information section - compact layout
+    info_data = [
+        ['Nom du bureau coordonnateur :', form_data.get('bureau', '')],
+        ['Nom de l\'enfant :', form_data.get('enfant', '')],
+        ['Nom du parent :', form_data.get('parent', '')],
+        ['Nom de la RSGE :', form_data.get('rsge', '')],
+        ['Date de fin de fréquentation :', form_data.get('date_fin', '')]
+    ]
+    
+    info_table = Table(info_data, colWidths=[3*inch, 3.8*inch])
+    info_table.setStyle(TableStyle([
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+        ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+        ('TOPPADDING', (0, 0), (-1, -1), 3),
+        # Add underlines for form fields
+        ('LINEBELOW', (1, 0), (1, -1), 1, colors.black),
+    ]))
+    
+    story.append(info_table)
+    story.append(Spacer(1, 10))
+    
+    # Legend section - corrected spelling
+    story.append(Paragraph("Légende", heading_style))
+    
+    legend_data = [
+        ['P : Présence 1 jour', 'P½ : Présence ½ jour', 'A : Absence 1 jour'],
+        ['A½ : Absence ½ jour', 'R : Enfant remplaçant 1 jour', 'R½ : Enfant remplaçant ½ jour'],
+        ['F : 1 jour fermeture non subventionné', 'AN : 1 journée non déterminée APSS', '']
+    ]
+    
+    legend_table = Table(legend_data, colWidths=[2.3*inch, 2.3*inch, 2.3*inch])
+    legend_table.setStyle(TableStyle([
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 0), (-1, -1), 8),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
+        ('TOPPADDING', (0, 0), (-1, -1), 2),
+    ]))
+    
+    story.append(legend_table)
+    story.append(Spacer(1, 10))
+    
+    # Attendance Grid - compact version
+    story.append(Paragraph("Assiduité", heading_style))
+    
+    # Create the main attendance table
+    attendance_headers = ['Semaine débutant le', 'L', 'M', 'M', 'J', 'V', 'S', 'D']
+    attendance_table_data = [attendance_headers]
+    
+    # Add 4 weeks of attendance data
+    attendance_data = form_data.get('attendance', [])
+    for week_idx in range(4):
+        if week_idx < len(attendance_data) and attendance_data[week_idx]:
+            week_data = attendance_data[week_idx]
+            start_date = week_data.get('startDate', '')
+            days = week_data.get('days', [''] * 7)
+            row = [start_date] + days[:7]  # Ensure exactly 7 days
+        else:
+            row = [''] + [''] * 7
+        attendance_table_data.append(row)
+    
+    attendance_table = Table(attendance_table_data, colWidths=[1.8*inch] + [0.6*inch]*7)
+    attendance_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 0), (-1, -1), 8),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.white]),
+    ]))
+    
+    story.append(attendance_table)
+    story.append(Spacer(1, 12))
+    
+    # Payment confirmation section - compact
+    story.append(Paragraph("Confirmation du paiement de la contribution réduite", heading_style))
+    
+    # Create payment rows - more compact
+    payments = form_data.get('payments', [])
+    for i in range(4):  # Always show 4 payment rows
+        payment = payments[i] if i < len(payments) else {'date': '', 'amount': '', 'balance': ''}
+        
+        payment_row_data = [
+            [f'Paiement n° {i+1}:', 'Date:', payment.get('date', ''), 'Montant:', f"${payment.get('amount', 0):.2f}" if payment.get('amount') else '', 'Solde:', f"${payment.get('balance', 0):.2f}" if payment.get('balance') else '']
+        ]
+        
+        payment_table = Table(payment_row_data, colWidths=[0.9*inch, 0.5*inch, 1*inch, 0.7*inch, 0.8*inch, 0.6*inch, 0.8*inch])
+        payment_table.setStyle(TableStyle([
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('FONTNAME', (1, 0), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+            # Add underlines for form fields
+            ('LINEBELOW', (2, 0), (2, 0), 1, colors.black),
+            ('LINEBELOW', (4, 0), (4, 0), 1, colors.black),
+            ('LINEBELOW', (6, 0), (6, 0), 1, colors.black),
+        ]))
+        
+        story.append(payment_table)
+        story.append(Spacer(1, 3))
+    
+    story.append(Spacer(1, 12))
+    
+    # Attestation and signature section - compact
+    story.append(Paragraph("Attestation", heading_style))
+    story.append(Paragraph(
+        "J'atteste que les renseignements inscrits sur cette fiche d'assiduité correspondent à la présence réelle de mon enfant et aux contributions réduites payées et à payer.",
+        normal_style
+    ))
+    story.append(Spacer(1, 10))
+    
+    # Signature section - compact
+    signature_data = [
+        ['Signature RSGE :', '', 'Signature Parent :'],
+        ['', '', '']
+    ]
+    
+    signature_table = Table(signature_data, colWidths=[2*inch, 1.5*inch, 2*inch], rowHeights=[0.25*inch, 0.6*inch])
+    signature_table.setStyle(TableStyle([
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('BOX', (0, 1), (0, 1), 1, colors.black),  # RSGE signature box
+        ('BOX', (2, 1), (2, 1), 1, colors.black),  # Parent signature box
+    ]))
+    
+    story.append(signature_table)
+    
+    # Add signature status if signed
+    if form_data.get('parent_signed'):
+        story.append(Spacer(1, 8))
+        story.append(Paragraph(f"Statut: Signé électroniquement le {form_data.get('parent_signed_date', '')[:10]}", normal_style))
+    
+    # Build PDF
+    doc.build(story)
+    buffer.seek(0)
+    return buffer
+
 # Check admin password
 def check_admin_password(password):
     return password == "garderiemariemeli1423"
@@ -196,15 +401,18 @@ page = st.sidebar.selectbox("Choisir une page", ["📋 Nouvelle Fiche", "🔐 Ad
 if page == "📋 Nouvelle Fiche":
     # Form page
     st.markdown('<div class="form-container"><h1>📋 Fiche d\'Assiduité</h1><p>Garderie en Milieu Familial - Signature Électronique</p></div>', unsafe_allow_html=True)
-
+    
     # Check if loading existing form
     form_id_query = st.query_params.get("id")
     form_data = {}
-    if form_id_query:
-        # Ensure form_id_query is treated as a list if it's a single value
-        form_id_list = form_id_query if isinstance(form_id_query, list) else [form_id_query]
-        if form_id_list:
-            form_data = get_form_from_db(form_id_list[0]) or {}
+    if form_id_query and form_id_query != "None":
+        form_data = get_form_from_db(form_id_query) or {}
+    
+    # Show admin link in sidebar if viewing existing form
+    if form_id_query and form_id_query != "None":
+        if st.sidebar.button("🔙 Retour à l'Administration"):
+            st.query_params.clear()
+            st.rerun()
 
     # Basic Information
     st.subheader("ℹ️ Informations de Base")
@@ -420,6 +628,7 @@ elif page == "🔐 Administration":
         with col2:
             if st.button("🚪 Déconnexion"):
                 st.session_state.admin_authenticated = False
+                st.query_params.clear()
                 st.rerun()
 
         # Load all forms
@@ -430,34 +639,57 @@ elif page == "🔐 Administration":
         with col1:
             if st.button("📋 Nouvelle Fiche", use_container_width=True):
                 # Clear query params to start a new form
-                st.query_params["id"] = None 
-                st.switch_page("app.py")
+                st.query_params.clear()
+                st.session_state.admin_authenticated = False  # Will need to re-authenticate
+                st.rerun()
         with col2:
             if st.button("📊 Exporter Données", use_container_width=True):
                 if forms:
-                    # Create DataFrame for export
-                    export_data = []
-                    for form_id, form in forms.items():
-                        export_data.append({
-                            'ID': form_id,
-                            'Enfant': form.get('enfant', ''),
-                            'Parent': form.get('parent', ''),
-                            'RSGE': form.get('rsge', ''),
-                            'Bureau': form.get('bureau', ''),
-                            'Date Fin': form.get('date_fin', ''),
-                            'Statut': form.get('status', ''),
-                            'Date Création': form.get('created_date', ''),
-                            'Signé': 'Oui' if form.get('parent_signed') else 'Non'
-                        })
+                    # Export options
+                    export_col1, export_col2 = st.columns(2)
+                    
+                    with export_col1:
+                        # CSV Export
+                        export_data = []
+                        for form_id, form in forms.items():
+                            export_data.append({
+                                'ID': form_id,
+                                'Enfant': form.get('enfant', ''),
+                                'Parent': form.get('parent', ''),
+                                'RSGE': form.get('rsge', ''),
+                                'Bureau': form.get('bureau', ''),
+                                'Date Fin': form.get('date_fin', ''),
+                                'Statut': form.get('status', ''),
+                                'Date Création': form.get('created_date', ''),
+                                'Signé': 'Oui' if form.get('parent_signed') else 'Non'
+                            })
 
-                    df = pd.DataFrame(export_data)
-                    csv = df.to_csv(index=False)
-                    st.download_button(
-                        label="📥 Télécharger CSV",
-                        data=csv,
-                        file_name=f"fiches_assiduite_{datetime.now().strftime('%Y%m%d')}.csv",
-                        mime="text/csv"
-                    )
+                        df = pd.DataFrame(export_data)
+                        csv = df.to_csv(index=False)
+                        st.download_button(
+                            label="📥 Télécharger CSV",
+                            data=csv,
+                            file_name=f"fiches_assiduite_{datetime.now().strftime('%Y%m%d')}.csv",
+                            mime="text/csv"
+                        )
+                    
+                    with export_col2:
+                        # PDF Export for individual forms
+                        selected_form = st.selectbox(
+                            "Choisir une fiche pour export PDF:",
+                            options=list(forms.keys()),
+                            format_func=lambda x: f"{forms[x].get('enfant', 'Sans nom')} - {forms[x].get('parent', 'Sans parent')}"
+                        )
+                        
+                        if st.button("📄 Générer PDF", use_container_width=True):
+                            if selected_form:
+                                pdf_buffer = generate_pdf_form(forms[selected_form])
+                                st.download_button(
+                                    label="📥 Télécharger PDF",
+                                    data=pdf_buffer.getvalue(),
+                                    file_name=f"fiche_{forms[selected_form].get('enfant', 'sans_nom')}_{datetime.now().strftime('%Y%m%d')}.pdf",
+                                    mime="application/pdf"
+                                )
 
         # Display forms
         if forms:
@@ -480,11 +712,22 @@ elif page == "🔐 Administration":
                         st.write(f"**Statut:** {status}")
 
                     with col3:
-                        col_view, col_del = st.columns(2)
+                        col_view, col_pdf, col_del = st.columns(3)
                         with col_view:
                             if st.button("👁️ Voir", key=f"view_{form_id}", use_container_width=True):
                                 st.query_params["id"] = form_id
-                                st.switch_page("app.py")
+                                st.session_state.admin_authenticated = False  # Will need to re-authenticate
+                                st.rerun()
+                        with col_pdf:
+                            if st.button("📄 PDF", key=f"pdf_{form_id}", use_container_width=True):
+                                pdf_buffer = generate_pdf_form(form)
+                                st.download_button(
+                                    label="📥 Télécharger",
+                                    data=pdf_buffer.getvalue(),
+                                    file_name=f"fiche_{form.get('enfant', 'sans_nom')}_{datetime.now().strftime('%Y%m%d')}.pdf",
+                                    mime="application/pdf",
+                                    key=f"download_pdf_{form_id}"
+                                )
                         with col_del:
                             if st.button("🗑️ Supprimer", key=f"delete_{form_id}", use_container_width=True):
                                 delete_form_from_db(form_id)
