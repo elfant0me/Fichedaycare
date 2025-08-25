@@ -1,0 +1,1256 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fiche d'Assiduité - Garderie Familiale</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 10px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 25px;
+            text-align: center;
+            position: relative;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="white" opacity="0.1"/><circle cx="75" cy="75" r="1.5" fill="white" opacity="0.1"/><circle cx="50" cy="10" r="0.8" fill="white" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+            pointer-events: none;
+        }
+
+        .header h1 {
+            font-size: 2.2em;
+            margin-bottom: 10px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+            position: relative;
+            z-index: 1;
+        }
+
+        .mode-selector {
+            display: flex;
+            justify-content: center;
+            margin: 20px;
+            gap: 15px;
+        }
+
+        .mode-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 1.1em;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .mode-btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: all 0.3s ease;
+        }
+
+        .mode-btn:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .mode-btn.active {
+            background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%);
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+
+        .content {
+            padding: 25px;
+        }
+
+        .section {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .form-row .form-group {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+            font-size: 1em;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 1em;
+            transition: all 0.3s ease;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .attendance-grid {
+            overflow-x: auto;
+            margin: 20px 0;
+        }
+
+        .attendance-table {
+            width: 100%;
+            min-width: 700px;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .attendance-table th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .attendance-table td {
+            padding: 10px;
+            text-align: center;
+            border: 1px solid #e1e5e9;
+        }
+
+        .attendance-table tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+
+        .attendance-select {
+            width: 80px;
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 0.9em;
+        }
+
+        .signature-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .signature-canvas {
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            background: white;
+            cursor: crosshair;
+            touch-action: none;
+        }
+
+        .signature-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.2);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+        }
+
+        .payment-section {
+            background: #e8f5e8;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .payment-row {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+
+        .payment-row input {
+            flex: 1;
+            min-width: 120px;
+        }
+
+        .legend {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .legend-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px;
+            background: white;
+            border-radius: 8px;
+        }
+
+        .legend-code {
+            background: #667eea;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 5px;
+            font-weight: bold;
+            min-width: 30px;
+            text-align: center;
+        }
+
+        .admin-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .saved-forms {
+            margin: 20px 0;
+        }
+
+        .saved-form-item {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+            border: 1px solid #e1e5e9;
+        }
+
+        .saved-form-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .saved-form-info {
+            flex: 1;
+        }
+
+        .saved-form-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 5px;
+                border-radius: 10px;
+            }
+            
+            .header {
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 1.8em;
+            }
+            
+            .mode-btn {
+                padding: 12px 20px;
+                font-size: 1em;
+            }
+            
+            .form-row {
+                flex-direction: column;
+            }
+            
+            .signature-controls {
+                flex-direction: column;
+            }
+            
+            .payment-row {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .admin-controls {
+                flex-direction: column;
+            }
+        }
+
+        .status-indicator {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+
+        .status-draft {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-signed {
+            background: #d4edda;
+            color: #155724;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📋 Fiche d'Assiduité</h1>
+            <p>Garderie en Milieu Familial - Signature Électronique</p>
+        </div>
+
+        <div class="mode-selector">
+            <button class="mode-btn active" onclick="switchMode('parent')">👨‍👩‍👧 Mode Parent</button>
+            <button class="mode-btn" onclick="switchMode('admin')">⚙️ Administration</button>
+        </div>
+
+        <!-- Mode Parent -->
+        <div id="parent-section" class="section active">
+            <div class="content">
+                <h2>Informations de Base</h2>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="bureau">Nom du bureau coordonnateur :</label>
+                        <input type="text" id="bureau" readonly>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="enfant">Nom de l'enfant :</label>
+                        <input type="text" id="enfant" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="parent">Nom du parent :</label>
+                        <input type="text" id="parent" readonly>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="rsge">Nom de la RSGE :</label>
+                        <input type="text" id="rsge" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="dateFin">Date de fin de fréquentation :</label>
+                        <input type="date" id="dateFin" readonly>
+                    </div>
+                </div>
+
+                <!-- Légende -->
+                <div class="legend">
+                    <h3>Légende des Codes</h3>
+                    <div class="legend-grid">
+                        <div class="legend-item">
+                            <span class="legend-code">P</span>
+                            <span>Présence 1 jour</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-code">P½</span>
+                            <span>Présence ½ jour</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-code">A</span>
+                            <span>Absence 1 jour</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-code">A½</span>
+                            <span>Absence ½ jour</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-code">R</span>
+                            <span>Enfant remplaçant 1 jour</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-code">R½</span>
+                            <span>Enfant remplaçant ½ jour</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-code">F</span>
+                            <span>1 jour fermeture non subventionné</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-code">AN</span>
+                            <span>1 journée non déterminée APSS</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Grille d'assiduité -->
+                <h3>Assiduité</h3>
+                <div class="attendance-grid">
+                    <table class="attendance-table" id="attendanceTable">
+                        <thead>
+                            <tr>
+                                <th>Semaine débutant le</th>
+                                <th>Lundi</th>
+                                <th>Mardi</th>
+                                <th>Mercredi</th>
+                                <th>Jeudi</th>
+                                <th>Vendredi</th>
+                                <th>Samedi</th>
+                                <th>Dimanche</th>
+                            </tr>
+                        </thead>
+                        <tbody id="attendanceBody">
+                            <!-- Les lignes seront générées dynamiquement -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Section des paiements -->
+                <div class="payment-section">
+                    <h3>Confirmation du paiement de la contribution réduite</h3>
+                    <div id="paymentRows">
+                        <!-- Les lignes de paiement seront générées dynamiquement -->
+                    </div>
+                </div>
+
+                <!-- Signatures -->
+                <div class="signature-section">
+                    <h3>Signature du Parent</h3>
+                    <p><strong>Attestation :</strong> J'atteste que les renseignements inscrits sur cette fiche d'assiduité correspondent à la présence réelle de mon enfant et aux contributions réduites payées et à payer.</p>
+                    <canvas id="parentSignature" class="signature-canvas" width="500" height="150"></canvas>
+                    <div class="signature-controls">
+                        <button class="btn btn-secondary" onclick="clearSignature('parentSignature')">Effacer</button>
+                        <button class="btn btn-success" onclick="saveForm()">Signer et Envoyer</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mode Administration -->
+        <div id="admin-section" class="section">
+            <div class="content">
+                <h2>Administration - Gestion des Fiches</h2>
+                
+                <div class="admin-controls">
+                    <button class="btn" onclick="createNewForm()">+ Nouvelle Fiche</button>
+                    <button class="btn btn-secondary" onclick="exportData()">📥 Exporter Données</button>
+                </div>
+
+                <!-- Formulaire d'édition -->
+                <div id="editForm" style="display: none;">
+                    <h3>Édition de la Fiche</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="editBureau">Bureau coordonnateur :</label>
+                            <input type="text" id="editBureau">
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="editEnfant">Nom de l'enfant :</label>
+                            <input type="text" id="editEnfant">
+                        </div>
+                        <div class="form-group">
+                            <label for="editParent">Nom du parent :</label>
+                            <input type="text" id="editParent">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="editRsge">Nom de la RSGE :</label>
+                            <input type="text" id="editRsge">
+                        </div>
+                        <div class="form-group">
+                            <label for="editDateFin">Date de fin :</label>
+                            <input type="date" id="editDateFin">
+                        </div>
+                    </div>
+
+                    <div class="signature-section">
+                        <h4>Signature de la RSGE</h4>
+                        <p><strong>Attestation :</strong> J'atteste que les renseignements inscrits sur cette fiche d'assiduité correspondent à la présence réelle de cet enfant et aux contributions réduites perçues et à percevoir.</p>
+                        <canvas id="rsgeSignature" class="signature-canvas" width="500" height="150"></canvas>
+                        <div class="signature-controls">
+                            <button class="btn btn-secondary" onclick="clearSignature('rsgeSignature')">Effacer</button>
+                        </div>
+                    </div>
+
+                    <div class="admin-controls">
+                        <button class="btn btn-success" onclick="saveEditedForm()">💾 Enregistrer</button>
+                        <button class="btn btn-secondary" onclick="cancelEdit()">❌ Annuler</button>
+                        <button class="btn" onclick="generateLink()">🔗 Générer Lien Parent</button>
+                    </div>
+                </div>
+
+                <!-- Liste des fiches sauvegardées -->
+                <div class="saved-forms">
+                    <h3>Fiches Enregistrées</h3>
+                    <div id="savedFormsList">
+                        <!-- Les fiches seront affichées ici -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentMode = 'parent';
+        let currentEditingId = null;
+        let forms = {};
+
+        // Données de signature
+        let isDrawing = false;
+        let lastX = 0;
+        let lastY = 0;
+
+        // Initialisation
+        document.addEventListener('DOMContentLoaded', function() {
+            loadForms();
+            setupSignatureCanvases();
+            loadFormData();
+            displaySavedForms();
+        });
+
+        function switchMode(mode) {
+            currentMode = mode;
+            
+            // Mettre à jour les boutons
+            document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Afficher/masquer les sections
+            document.querySelectorAll('.section').forEach(section => section.classList.remove('active'));
+            document.getElementById(mode + '-section').classList.add('active');
+            
+            if (mode === 'admin') {
+                displaySavedForms();
+            }
+        }
+
+        function setupSignatureCanvases() {
+            const canvases = ['parentSignature', 'rsgeSignature'];
+            
+            canvases.forEach(canvasId => {
+                const canvas = document.getElementById(canvasId);
+                if (!canvas) return;
+                
+                const ctx = canvas.getContext('2d');
+                
+                // Configuration du style de dessin
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 2;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                
+                // Événements souris
+                canvas.addEventListener('mousedown', startDrawing);
+                canvas.addEventListener('mousemove', draw);
+                canvas.addEventListener('mouseup', stopDrawing);
+                canvas.addEventListener('mouseout', stopDrawing);
+                
+                // Événements tactiles
+                canvas.addEventListener('touchstart', handleTouch);
+                canvas.addEventListener('touchmove', handleTouch);
+                canvas.addEventListener('touchend', stopDrawing);
+                
+                function startDrawing(e) {
+                    isDrawing = true;
+                    const rect = canvas.getBoundingClientRect();
+                    lastX = e.clientX - rect.left;
+                    lastY = e.clientY - rect.top;
+                }
+                
+                function draw(e) {
+                    if (!isDrawing) return;
+                    
+                    const rect = canvas.getBoundingClientRect();
+                    const currentX = e.clientX - rect.left;
+                    const currentY = e.clientY - rect.top;
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(lastX, lastY);
+                    ctx.lineTo(currentX, currentY);
+                    ctx.stroke();
+                    
+                    lastX = currentX;
+                    lastY = currentY;
+                }
+                
+                function stopDrawing() {
+                    isDrawing = false;
+                }
+                
+                function handleTouch(e) {
+                    e.preventDefault();
+                    const touch = e.touches[0];
+                    const mouseEvent = new MouseEvent(e.type === 'touchstart' ? 'mousedown' : 
+                                                    e.type === 'touchmove' ? 'mousemove' : 'mouseup', {
+                        clientX: touch.clientX,
+                        clientY: touch.clientY
+                    });
+                    canvas.dispatchEvent(mouseEvent);
+                }
+            });
+        }
+
+        function clearSignature(canvasId) {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+
+        function generateAttendanceGrid() {
+            const tbody = document.getElementById('attendanceBody');
+            tbody.innerHTML = '';
+            
+            // Générer 4 semaines par défaut
+            for (let week = 0; week < 4; week++) {
+                const row = tbody.insertRow();
+                
+                // Date de début de semaine
+                const dateCell = row.insertCell();
+                const dateInput = document.createElement('input');
+                dateInput.type = 'date';
+                dateInput.style.width = '100%';
+                dateInput.style.border = 'none';
+                dateInput.style.background = 'transparent';
+                if (currentMode === 'parent') {
+                    dateInput.readOnly = true;
+                }
+                dateCell.appendChild(dateInput);
+                
+                // Cellules pour chaque jour
+                for (let day = 0; day < 7; day++) {
+                    const cell = row.insertCell();
+                    const select = document.createElement('select');
+                    select.className = 'attendance-select';
+                    
+                    if (currentMode === 'parent') {
+                        select.disabled = true;
+                    }
+                    
+                    const options = ['', 'P', 'P½', 'A', 'A½', 'R', 'R½', 'F', 'F½', 'AN', 'AD', 'L', 'S', 'S½'];
+                    options.forEach(option => {
+                        const opt = document.createElement('option');
+                        opt.value = option;
+                        opt.textContent = option;
+                        select.appendChild(opt);
+                    });
+                    
+                    cell.appendChild(select);
+                }
+            }
+        }
+
+        function generatePaymentRows() {
+            const container = document.getElementById('paymentRows');
+            container.innerHTML = '';
+            
+            for (let i = 0; i < 4; i++) {
+                const paymentRow = document.createElement('div');
+                paymentRow.className = 'payment-row';
+                
+                paymentRow.innerHTML = `
+                    <input type="date" placeholder="Date du paiement" ${currentMode === 'parent' ? 'readonly' : ''}>
+                    <input type="number" placeholder="Montant payé ($)" step="0.01" ${currentMode === 'parent' ? 'readonly' : ''}>
+                    <input type="number" placeholder="Solde à payer ($)" step="0.01" ${currentMode === 'parent' ? 'readonly' : ''}>
+                `;
+                
+                container.appendChild(paymentRow);
+            }
+        }
+
+        function loadFormData() {
+            // Obtenir l'ID depuis l'URL si présent
+            const urlParams = new URLSearchParams(window.location.search);
+            const formId = urlParams.get('id');
+            
+            if (formId && forms[formId]) {
+                const formData = forms[formId];
+                loadFormIntoFields(formData);
+            } else if (currentMode === 'parent' && Object.keys(forms).length === 0) {
+                // Créer un formulaire exemple pour la démo
+                createExampleForm();
+            }
+            
+            generateAttendanceGrid();
+            generatePaymentRows();
+        }
+
+        function loadFormIntoFields(formData) {
+            document.getElementById('bureau').value = formData.bureau || '';
+            document.getElementById('enfant').value = formData.enfant || '';
+            document.getElementById('parent').value = formData.parent || '';
+            document.getElementById('rsge').value = formData.rsge || '';
+            document.getElementById('dateFin').value = formData.dateFin || '';
+        }
+
+        function saveForm() {
+            if (!validateParentSignature()) {
+                alert('Veuillez signer avant d\'envoyer le formulaire.');
+                return;
+            }
+            
+            const formData = collectFormData();
+            formData.parentSigned = true;
+            formData.parentSignedDate = new Date().toISOString();
+            formData.status = 'signed';
+            
+            const formId = 'form_' + Date.now();
+            forms[formId] = formData;
+            saveForms();
+            
+            alert('Formulaire signé et envoyé avec succès !');
+        }
+
+        function validateParentSignature() {
+            const canvas = document.getElementById('parentSignature');
+            const ctx = canvas.getContext('2d');
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            
+            // Vérifier si le canvas contient des pixels non-blancs
+            for (let i = 0; i < imageData.data.length; i += 4) {
+                if (imageData.data[i + 3] > 0) { // Canal alpha
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function collectFormData() {
+            const data = {
+                bureau: document.getElementById('bureau').value,
+                enfant: document.getElementById('enfant').value,
+                parent: document.getElementById('parent').value,
+                rsge: document.getElementById('rsge').value,
+                dateFin: document.getElementById('dateFin').value,
+                attendance: [],
+                payments: [],
+                parentSignature: '',
+                rsgeSignature: '',
+                createdDate: new Date().toISOString(),
+                status: 'draft'
+            };
+            
+            // Collecter les données d'assiduité
+            const attendanceRows = document.querySelectorAll('#attendanceBody tr');
+            attendanceRows.forEach(row => {
+                const weekData = {
+                    startDate: row.cells[0].querySelector('input').value,
+                    days: []
+                };
+                
+                for (let i = 1; i < 8; i++) {
+                    weekData.days.push(row.cells[i].querySelector('select').value);
+                }
+                
+                data.attendance.push(weekData);
+            });
+            
+            // Collecter les données de paiement
+            const paymentRows = document.querySelectorAll('#paymentRows .payment-row');
+            paymentRows.forEach(row => {
+                const inputs = row.querySelectorAll('input');
+                data.payments.push({
+                    date: inputs[0].value,
+                    amount: inputs[1].value,
+                    balance: inputs[2].value
+                });
+            });
+            
+            // Capturer les signatures
+            const parentCanvas = document.getElementById('parentSignature');
+            const rsgeCanvas = document.getElementById('rsgeSignature');
+            
+            if (parentCanvas) {
+                data.parentSignature = parentCanvas.toDataURL();
+            }
+            if (rsgeCanvas) {
+                data.rsgeSignature = rsgeCanvas.toDataURL();
+            }
+            
+            return data;
+        }
+
+        function createNewForm() {
+            currentEditingId = null;
+            document.getElementById('editForm').style.display = 'block';
+            
+            // Réinitialiser les champs
+            document.getElementById('editBureau').value = '';
+            document.getElementById('editEnfant').value = '';
+            document.getElementById('editParent').value = '';
+            document.getElementById('editRsge').value = '';
+            document.getElementById('editDateFin').value = '';
+            
+            clearSignature('rsgeSignature');
+            
+            // Faire défiler vers le formulaire
+            document.getElementById('editForm').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function saveEditedForm() {
+            const formData = {
+                bureau: document.getElementById('editBureau').value,
+                enfant: document.getElementById('editEnfant').value,
+                parent: document.getElementById('editParent').value,
+                rsge: document.getElementById('editRsge').value,
+                dateFin: document.getElementById('editDateFin').value,
+                attendance: [],
+                payments: [],
+                rsgeSignature: document.getElementById('rsgeSignature').toDataURL(),
+                createdDate: new Date().toISOString(),
+                status: 'draft',
+                parentSigned: false
+            };
+            
+            // Générer des données d'assiduité et de paiement vides
+            for (let week = 0; week < 4; week++) {
+                formData.attendance.push({
+                    startDate: '',
+                    days: ['', '', '', '', '', '', '']
+                });
+            }
+            
+            for (let i = 0; i < 4; i++) {
+                formData.payments.push({
+                    date: '',
+                    amount: '',
+                    balance: ''
+                });
+            }
+            
+            const formId = currentEditingId || 'form_' + Date.now();
+            forms[formId] = formData;
+            saveForms();
+            
+            document.getElementById('editForm').style.display = 'none';
+            displaySavedForms();
+            
+            alert('Formulaire sauvegardé avec succès !');
+        }
+
+        function editForm(formId) {
+            currentEditingId = formId;
+            const formData = forms[formId];
+            
+            document.getElementById('editBureau').value = formData.bureau || '';
+            document.getElementById('editEnfant').value = formData.enfant || '';
+            document.getElementById('editParent').value = formData.parent || '';
+            document.getElementById('editRsge').value = formData.rsge || '';
+            document.getElementById('editDateFin').value = formData.dateFin || '';
+            
+            // Charger la signature RSGE si elle existe
+            if (formData.rsgeSignature) {
+                const canvas = document.getElementById('rsgeSignature');
+                const ctx = canvas.getContext('2d');
+                const img = new Image();
+                img.onload = function() {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(img, 0, 0);
+                };
+                img.src = formData.rsgeSignature;
+            }
+            
+            document.getElementById('editForm').style.display = 'block';
+            document.getElementById('editForm').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function deleteForm(formId) {
+            if (confirm('Êtes-vous sûr de vouloir supprimer cette fiche ?')) {
+                delete forms[formId];
+                saveForms();
+                displaySavedForms();
+            }
+        }
+
+        function viewForm(formId) {
+            // Créer une nouvelle fenêtre pour afficher le formulaire
+            const formData = forms[formId];
+            const newWindow = window.open('', '_blank', 'width=800,height=600');
+            
+            newWindow.document.write(`
+                <html>
+                <head>
+                    <title>Fiche d'Assiduité - ${formData.enfant}</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; padding: 20px; }
+                        .header { text-align: center; margin-bottom: 30px; }
+                        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+                        .signature { border: 1px solid #ddd; height: 100px; margin: 10px 0; }
+                        .status { padding: 5px 10px; border-radius: 15px; display: inline-block; }
+                        .status-draft { background: #fff3cd; color: #856404; }
+                        .status-signed { background: #d4edda; color: #155724; }
+                    </style>
+                </head>
+                <body>
+                    <div class="header">
+                        <h1>Fiche d'Assiduité</h1>
+                        <p>Garderie en Milieu Familial</p>
+                        <span class="status status-${formData.status}">
+                            ${formData.status === 'signed' ? 'Signé' : 'Brouillon'}
+                        </span>
+                    </div>
+                    
+                    <div class="info-grid">
+                        <div><strong>Bureau coordonnateur:</strong> ${formData.bureau}</div>
+                        <div><strong>Date de fin:</strong> ${formData.dateFin}</div>
+                        <div><strong>Enfant:</strong> ${formData.enfant}</div>
+                        <div><strong>Parent:</strong> ${formData.parent}</div>
+                        <div colspan="2"><strong>RSGE:</strong> ${formData.rsge}</div>
+                    </div>
+                    
+                    <h3>Signatures</h3>
+                    <div>
+                        <h4>Signature RSGE:</h4>
+                        <img src="${formData.rsgeSignature}" style="border: 1px solid #ddd; max-width: 400px;">
+                    </div>
+                    
+                    ${formData.parentSignature ? `
+                    <div>
+                        <h4>Signature Parent:</h4>
+                        <img src="${formData.parentSignature}" style="border: 1px solid #ddd; max-width: 400px;">
+                        <p><small>Signé le: ${new Date(formData.parentSignedDate).toLocaleDateString('fr-FR')}</small></p>
+                    </div>
+                    ` : ''}
+                    
+                    <div style="margin-top: 30px;">
+                        <button onclick="window.print()">Imprimer</button>
+                        <button onclick="window.close()">Fermer</button>
+                    </div>
+                </body>
+                </html>
+            `);
+        }
+
+        function cancelEdit() {
+            document.getElementById('editForm').style.display = 'none';
+            currentEditingId = null;
+        }
+
+        function generateLink(formId) {
+            if (!formId) {
+                // Si on est en train d'éditer, utiliser l'ID en cours
+                if (currentEditingId) {
+                    formId = currentEditingId;
+                } else {
+                    alert('Veuillez d\'abord sauvegarder le formulaire.');
+                    return;
+                }
+            }
+            
+            const baseUrl = window.location.origin + window.location.pathname;
+            const parentLink = `${baseUrl}?id=${formId}`;
+            
+            // Copier dans le presse-papiers
+            navigator.clipboard.writeText(parentLink).then(() => {
+                alert('Lien copié dans le presse-papiers!\n\nEnvoyez ce lien au parent :\n' + parentLink);
+            }).catch(() => {
+                // Fallback si clipboard API n'est pas disponible
+                prompt('Copiez ce lien et envoyez-le au parent :', parentLink);
+            });
+        }
+
+        function displaySavedForms() {
+            const container = document.getElementById('savedFormsList');
+            container.innerHTML = '';
+            
+            if (Object.keys(forms).length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #666; margin: 40px 0;">Aucune fiche enregistrée</p>';
+                return;
+            }
+            
+            Object.entries(forms).forEach(([formId, formData]) => {
+                const formItem = document.createElement('div');
+                formItem.className = 'saved-form-item';
+                
+                const statusClass = formData.status === 'signed' ? 'status-signed' : 'status-draft';
+                const statusText = formData.status === 'signed' ? 'Signé' : 'Brouillon';
+                
+                formItem.innerHTML = `
+                    <div class="saved-form-header">
+                        <div class="saved-form-info">
+                            <h4>${formData.enfant || 'Sans nom'}</h4>
+                            <p><strong>Parent:</strong> ${formData.parent || 'Non spécifié'}</p>
+                            <p><strong>RSGE:</strong> ${formData.rsge || 'Non spécifié'}</p>
+                            <p><small>Créé le: ${new Date(formData.createdDate).toLocaleDateString('fr-FR')}</small></p>
+                        </div>
+                        <div>
+                            <span class="status-indicator ${statusClass}">${statusText}</span>
+                        </div>
+                    </div>
+                    <div class="saved-form-actions">
+                        <button class="btn btn-secondary" onclick="viewForm('${formId}')">👁️ Voir</button>
+                        <button class="btn" onclick="editForm('${formId}')">✏️ Éditer</button>
+                        <button class="btn" onclick="generateLink('${formId}')">🔗 Lien Parent</button>
+                        <button class="btn btn-danger" onclick="deleteForm('${formId}')">🗑️ Supprimer</button>
+                    </div>
+                `;
+                
+                container.appendChild(formItem);
+            });
+        }
+
+        function exportData() {
+            const dataStr = JSON.stringify(forms, null, 2);
+            const dataBlob = new Blob([dataStr], {type: 'application/json'});
+            
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(dataBlob);
+            link.download = 'fiches_assiduite_' + new Date().toISOString().split('T')[0] + '.json';
+            link.click();
+        }
+
+        function loadForms() {
+            const saved = localStorage.getItem('ficheassiduite_forms');
+            if (saved) {
+                try {
+                    forms = JSON.parse(saved);
+                } catch (e) {
+                    console.error('Erreur lors du chargement des formulaires:', e);
+                    forms = {};
+                }
+            }
+        }
+
+        function saveForms() {
+            localStorage.setItem('ficheassiduite_forms', JSON.stringify(forms));
+        }
+
+        function createExampleForm() {
+            const exampleData = {
+                bureau: "Bureau Coordonnateur de Thetford-Mines",
+                enfant: "Marie Tremblay",
+                parent: "Julie Tremblay",
+                rsge: "Sylvie Bouchard",
+                dateFin: "2025-12-31",
+                attendance: [
+                    { startDate: '2025-08-25', days: ['P', 'P', 'P', 'P', 'P', '', ''] },
+                    { startDate: '2025-09-01', days: ['P', 'P', 'A', 'P', 'P', '', ''] },
+                    { startDate: '2025-09-08', days: ['P', 'P', 'P', 'P', 'P½', '', ''] },
+                    { startDate: '2025-09-15', days: ['P', 'P', 'P', 'P', 'P', '', ''] }
+                ],
+                payments: [
+                    { date: '2025-08-25', amount: '45.50', balance: '0.00' },
+                    { date: '2025-09-01', amount: '42.75', balance: '0.00' },
+                    { date: '', amount: '', balance: '' },
+                    { date: '', amount: '', balance: '' }
+                ],
+                rsgeSignature: '',
+                parentSignature: '',
+                createdDate: new Date().toISOString(),
+                status: 'draft',
+                parentSigned: false
+            };
+            
+            forms['example_form'] = exampleData;
+            saveForms();
+        }
+
+        // Charger les données dans le formulaire parent au démarrage
+        function loadDataIntoParentForm() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const formId = urlParams.get('id') || 'example_form';
+            
+            if (forms[formId]) {
+                const formData = forms[formId];
+                loadFormIntoFields(formData);
+                
+                // Charger les données d'assiduité
+                setTimeout(() => {
+                    const attendanceRows = document.querySelectorAll('#attendanceBody tr');
+                    attendanceRows.forEach((row, index) => {
+                        if (formData.attendance[index]) {
+                            const weekData = formData.attendance[index];
+                            row.cells[0].querySelector('input').value = weekData.startDate;
+                            
+                            for (let day = 0; day < 7; day++) {
+                                if (weekData.days[day]) {
+                                    row.cells[day + 1].querySelector('select').value = weekData.days[day];
+                                }
+                            }
+                        }
+                    });
+                    
+                    // Charger les données de paiement
+                    const paymentRows = document.querySelectorAll('#paymentRows .payment-row');
+                    paymentRows.forEach((row, index) => {
+                        if (formData.payments[index]) {
+                            const paymentData = formData.payments[index];
+                            const inputs = row.querySelectorAll('input');
+                            inputs[0].value = paymentData.date;
+                            inputs[1].value = paymentData.amount;
+                            inputs[2].value = paymentData.balance;
+                        }
+                    });
+                }, 100);
+            }
+        }
+
+        // Mise à jour de la fonction loadFormData
+        function loadFormData() {
+            generateAttendanceGrid();
+            generatePaymentRows();
+            
+            if (currentMode === 'parent') {
+                setTimeout(loadDataIntoParentForm, 200);
+            }
+        }
+
+        // Fonction pour mettre à jour un formulaire avec les données signées
+        function updateFormWithSignature() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const formId = urlParams.get('id') || 'example_form';
+            
+            if (forms[formId]) {
+                const updatedData = collectFormData();
+                updatedData.parentSigned = true;
+                updatedData.parentSignedDate = new Date().toISOString();
+                updatedData.status = 'signed';
+                
+                // Conserver les données originales et ajouter la signature
+                forms[formId] = { ...forms[formId], ...updatedData };
+                saveForms();
+            }
+        }
+
+        // Modifier la fonction saveForm pour utiliser l'ID correct
+        function saveForm() {
+            if (!validateParentSignature()) {
+                alert('Veuillez signer avant d\'envoyer le formulaire.');
+                return;
+            }
+            
+            updateFormWithSignature();
+            alert('Formulaire signé et envoyé avec succès !');
+            
+            // Désactiver le bouton pour éviter les doubles soumissions
+            event.target.disabled = true;
+            event.target.textContent = 'Formulaire Envoyé ✓';
+            event.target.style.background = '#2ecc71';
+        }
+    </script>
+</body>
+</html>
