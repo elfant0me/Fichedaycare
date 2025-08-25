@@ -1,1 +1,5 @@
 streamlit
+flask
+pandas
+pillow
+streamlit-drawable-canvas
